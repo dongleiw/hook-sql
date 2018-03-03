@@ -1,0 +1,23 @@
+# Author: DL
+# Time: 2017-10-02
+#
+
+功能:
+	根据消息名字序列化数据成google-protobuf-message-instance
+
+依赖:
+	python-protobuf			# (In ubuntu: sudo apt  install python-protobuf)
+	protobuf-compiler		# (In ubuntu: sudo apt  install protobuf-compiler)
+
+编译:
+	为了根据消息名字找到对应的protobuf-message, 需要将相关的proto编译成为python
+
+	sh mkpb.sh {dir_of_proto} ${dir_of_proto} ...
+
+	mkpb.sh 会将proto编译到./pypb/目录下, 每次执行都会首先将该目录清空
+
+
+
+使用:
+	编译proto
+

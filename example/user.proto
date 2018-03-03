@@ -1,0 +1,7 @@
+message Equipment
+{
+	optional int32 id			= 1;
+	optional int32 level		= 2;
+	repeated int32 properties	= 3;
+};
+
