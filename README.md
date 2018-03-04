@@ -39,12 +39,17 @@
   * others
 
 ### usage
-  execute hsql directly
-  
+  首先创建数据库
+
+	$ cd example
+	$ sh prepare.sh # 创建hooksql_test数据库, 创建User表. 插入一条记录.
+
+  将表User中的数据查询出来. 由于列`equipment`是pb, 二进制数据无法查看, 因此使用pbm反序列化出来.
+
 	python hsql.py  -uroot -p123456 -hlocalhost -dhooksql_test -e "select user_id, pbm(equipment) from User";
 
 
- use hsql as library
+ 或者将hsql当作库使用
 
 	$ python
 	$ >>> import hsql
