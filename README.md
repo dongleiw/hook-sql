@@ -26,9 +26,6 @@
 
 
 ### current hooks
-  * google-protobuf             # see ./hooks/google_proto_imp/README
-
-### current hooks
   * google-protobuf (hooks/google_proto_imp/README)
    + pbm/google_proto_parse_message
      将google-protobuf序列化后的二进制数据反序列化出来.
