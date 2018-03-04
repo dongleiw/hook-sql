@@ -1,11 +1,12 @@
-hook-sql
+##hook-sql
 
 游戏数据库中的很多数据是有一定格式的二进制数据，这种在查询/修改时就比较麻烦. 为了解决这个问题，在sql之上简单封装了一下，可以自定义一些函数，来进一步处理二进制数据
 
-hooks:
+###hooks:
 
-	目录: hooks/
+  目录: hooks/
 
+	```
 	hook_map={}
 	def country_code_to_text(columnname, country_code, default_text):
 		if(country_code == 356):
@@ -19,11 +20,10 @@ hooks:
 
 	hook_map['country_code_to_text'] = country_code_to_text;
 	hook_map['countrycode'] = country_code_to_text;
+	```
 
-	select countrycode(ccode, 'India') from Country;
-
-	func `country_code_to_text` is executed as: 
-		country_code_to_text('ccode', [raw_data_returned_from sql], 'India');
+  如果执行hsql: ```select countrycode(ccode, 'India') from Country;```
+  函数countrycode将被调用: country_code_to_text('ccode', [raw_data_returned_from sql], 'India');
 
 
 current hooks:
