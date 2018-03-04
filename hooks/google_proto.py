@@ -24,6 +24,10 @@ def google_proto_parse_message(column_name, column_data, message_name=None):
 		for p in parts2:
 			message_name = message_name + p.capitalize();
 		#print('guess messagename is ', message_name);
+	else:
+		if(len(message_name) != 1):
+			return "invalid args message_name";
+		message_name = message_name[0];
 
 	msg = pbparse.parse_data_to_message(column_data, message_name);
 	return str(msg);

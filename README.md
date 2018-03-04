@@ -28,10 +28,19 @@ hooks:
 
 
 current hooks:
-	google-protobuf
+	google-protobuf # see ./hooks/google_proto_imp/README
 
 
-google-protobuf:
-	依赖: 
-		protobuf
-		python-protobuf
+usage:
+	# execute hsql directly
+	python hsql.py  -uroot -p123456 -hlocalhost -dhooksql_test -e "select user_id, pbm(equipment) from User";
+
+	# use hsql as library
+	--------------------
+	$ python
+	$ >>> import hsql
+	$ >>> hsql=hsql.HSQL('localhost', 'root', '123456', 'hooksql_test');
+	$ >>> hsql.execute('select user_id, pbm(equipment) from User');
+
+
+

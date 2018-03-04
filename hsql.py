@@ -20,7 +20,11 @@ class HookedColumn:
 	def __init__(self, name, hook, args):
 		self.name = name;
 		self.hook = hook;
-		self.args = args;
+		if(args is not None):
+			stripped_args = [a.strip() for a in args];
+			self.args = stripped_args;
+		else:
+			self.args = args;
 	def __str__(self):
 		return "name[%s] hook[%s] args[%s]" %(self.name, self.hook, self.args);
 
@@ -31,6 +35,7 @@ def register_hook(name, func, from_file):
 		print("hook[%s] from file[%s] already exists. new-from[%s]" %(name, global_hooks[name].from_file, from_file));
 		exit();
 	global_hooks[name] = Hook(name, func, from_file);
+	print("----> hook[%s] from file[%s]" %(name, from_file));
 
 def load_hooks():
 	'''
@@ -49,7 +54,7 @@ def load_hooks():
 				register_hook(name, func, hook_dir + "/" + f);
 
 
-class HSQL:
+class HSQLParser:
 	def DebugPrint(self):
 		print('hsql[%s]' %self.hsql);
 		print('sql[%s]' %self.sql);
@@ -63,22 +68,22 @@ class HSQL:
 			parse hsql
 			return None if failed
 		'''
-		hsql = HSQL();
-		hsql.hsql=hsql_str;
-		hsql.hooked_columns=[]
-		hsql.sql=''
+		hsqlparser = HSQLParser();
+		hsqlparser.hsql=hsql_str;
+		hsqlparser.hooked_columns=[]
+		hsqlparser.sql=''
 
 		# get output columns from hsql
-		select_idx = hsql.hsql.find('select');
-		from_idx = hsql.hsql.find('from');
+		select_idx = hsqlparser.hsql.find('select');
+		from_idx = hsqlparser.hsql.find('from');
 
 		if(select_idx==-1 or from_idx==-1):
-			print('sql[%s] is not valid "select xxx from xxx"' %hsql.hsql);
+			print('sql[%s] is not valid "select xxx from xxx"' %hsqlparser.hsql);
 			return None;
 
 		select_idx = select_idx + len('select');
-		from_part = hsql.hsql[from_idx:];
-		columns_part = hsql.hsql[select_idx:from_idx].strip();
+		from_part = hsqlparser.hsql[from_idx:];
+		columns_part = hsqlparser.hsql[select_idx:from_idx].strip();
 
 		#print("part ", columns_part, from_part);
 
@@ -103,7 +108,7 @@ class HSQL:
 		
 		#print(columns);
 		columns_removed_hooks=[]
-		# get all hooked-columns
+		# get all hooked-columns  (column1, func1(column2,arg1,arg2,arg3), func2(column3)
 		for f in columns:
 			f=f.strip();
 			hooked_column = None;
@@ -122,42 +127,59 @@ class HSQL:
 					right_parentheses_idx = f.find(')');
 					if(comma_idx > 0): # has other arguments
 						original_column_name = f[left_parentheses_idx+1:comma_idx];
-						args = f[comma_idx+1: right_parentheses_idx];
+						args = f[comma_idx+1: right_parentheses_idx].split(',');
 						hooked_column = HookedColumn(original_column_name, hook, args);
 					else: # only one arguments
 						original_column_name = f[left_parentheses_idx+1:right_parentheses_idx];
 						hooked_column = HookedColumn(original_column_name, hook, None);
 						
-			hsql.hooked_columns.append(hooked_column);
+			hsqlparser.hooked_columns.append(hooked_column);
 			columns_removed_hooks.append(original_column_name);
 
-		hsql.sql = "select %s %s" %( ','.join(columns_removed_hooks), from_part );
+		hsqlparser.sql = "select %s %s" %( ','.join(columns_removed_hooks), from_part );
 
-		return hsql;
+		return hsqlparser;
 
+class HSQL:
+	'''
 
-def execute_hsql(hsql_str):
-	hsql = HSQL.parse_hsql(hsql_str);
-	if(hsql is None):
-		return
-	#hsql.DebugPrint();
+	'''
+	def __init__(self, host, user, pswd, db, hsql=""):
+		self.host = host;
+		self.user = user;
+		self.pswd = pswd;
+		self.db   = db;
+		self.hsql = hsql;
 
-	cursor = conn.cursor();
-	cursor.execute(hsql.sql);
+		self.conn=MySQLdb.connect(self.host, self.user, self.pswd, self.db);
 
-	#print(cursor.description);
-	for r in cursor:
-		for fidx in range(0, len(cursor.description)):
-			column_name = cursor.description[fidx][0];
-			hooked_column = hsql.hooked_columns[fidx];
-			if(hooked_column is not None):
-				sys.stdout.write("%-20s" %(column_name+":"));
-				text = hooked_column.hook.func(column_name, r[fidx], hooked_column.args);
-				text = text.replace('\n', '\\n');
-				sys.stdout.write(text);
-			else:
-				sys.stdout.write("%-20s%s" %(column_name+":", r[fidx]));
-			sys.stdout.write("\n");
+		load_hooks();
+
+	def execute(self, hsql_str):
+		hsqlparser = HSQLParser.parse_hsql(hsql_str);
+		if(hsqlparser is None):
+			return
+		#hsqlparser.DebugPrint();
+
+		cursor = self.conn.cursor();
+		cursor.execute(hsqlparser.sql);
+
+		#print(cursor.description);
+		result=""
+		for r in cursor:
+			for fidx in range(0, len(cursor.description)):
+				column_name = cursor.description[fidx][0];
+				hooked_column = hsqlparser.hooked_columns[fidx];
+				if(hooked_column is not None):
+					result = result + "%-20s" %(column_name+":");
+					text = hooked_column.hook.func(column_name, r[fidx], hooked_column.args);
+					text = text.replace('\n', '\\n');
+					result = result + text;
+				else:
+					result = result + "%-20s%s" %(column_name+":", r[fidx]);
+				result = result + "\n";
+		return result;
+
 
 if __name__ == '__main__':
 	helpstr='''
@@ -166,6 +188,7 @@ if __name__ == '__main__':
 -p {mysql.password}         # password of mysql
 -h {mysql.host}             # host of mysql
 -d {mysql.db}               # db of mysql
+-e {hsql}                   # execute the hsql and quit
 	'''
 
 	# parse arguments
@@ -174,7 +197,8 @@ if __name__ == '__main__':
 	password=None
 	db=None
 	host='localhost'
-	opts, args = getopt.getopt(sys.argv[1:], 'u:p:h:d:', ['help'])
+	e_hsql=None
+	opts, args = getopt.getopt(sys.argv[1:], 'u:p:h:d:e:', ['help'])
 	for op,value in opts:
 		if op == '-u':
 			user = value;
@@ -184,7 +208,13 @@ if __name__ == '__main__':
 			host = value;
 		elif op == '-d':
 			db = value;
+		elif op == '-e':
+			e_hsql = value;
 		elif op == '--help':
+			print(helpstr);
+			exit();
+		else:
+			print("unknown option[%s]", op);
 			print(helpstr);
 			exit();
 
@@ -197,10 +227,12 @@ if __name__ == '__main__':
 	if(password is None):
 		password = getpass.getpass();
 
-	load_hooks();
+	if(e_hsql):
+		hsql = HSQL(host, user, password, db);
+		hsql.execute(e_hsql);
+		exit();
 
-	# connect to mysql
-	conn=MySQLdb.connect(host, user, password, db);
+	hsql = HSQL(host, user, password, db);
 
 	input_hsql_str = None
 	while(True):
@@ -210,5 +242,6 @@ if __name__ == '__main__':
 		if(input_hsql_str):
 			if(input_hsql_str.lower() == 'quit' or input_hsql_str.lower() == 'exit'):
 				break;
-			execute_hsql(input_hsql_str);
+			result = hsql.execute(input_hsql_str);
+			print(result);
 
