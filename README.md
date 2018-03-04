@@ -39,10 +39,13 @@
   * others
 
 ### usage
-  首先创建数据库
+  首先创建数据库, 编译proto
 
 	$ cd example
 	$ sh prepare.sh # 创建hooksql_test数据库, 创建User表. 插入一条记录.
+	$ cd ../hooks/google_proto_imp
+	$ sh mkpb.sh ../../example/ # 将example/user.proto编译为python, 这样hsql才能找到二进制数据对应google-protobuf-message
+
 
   将表User中的数据查询出来. 由于列`equipment`是pb, 二进制数据无法查看, 因此使用pbm反序列化出来.
 
